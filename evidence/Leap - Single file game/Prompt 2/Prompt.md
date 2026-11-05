@@ -1,0 +1,3 @@
+# Prompt 2
+
+Make a platformer game called "Leap". It should be in one, contained HTML file, it can include CSS, and JS. It should have a pixel-art, retro ascetic. Please make at least 10 levels, each lasting at least 1 minute. There should be a full main menu, with avatar customisation and difficulty selection. You need to add special traps and weapons designed to make the gam harder. There should be, easy-medium-hard-extreme. It should have a sight 3d look. Run at least 5 tests on each level as well as any menus or buttons. Also add 5 secrets that are hard to find and do not say them. This should be a full, rich, good looking game.
