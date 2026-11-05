@@ -16,11 +16,25 @@ For the second prompt, I specified a game called **Leap**, requiring retro pixel
 | | Prompt 1: Basic | Prompt 2: Detailed |
 | --- | --- | --- |
 | **Game** | **Lantern Leap** | **Leap** |
-| **GitHub file** | [01 — Lantern Leap (HTML)](../games/01-lantern-leap-baseline.html) | [02 — Leap (HTML)](../games/02-leap-detailed-prompt.html) |
+| **GitHub file** | [01 — Lantern Leap (HTML)](../evidence/Leap%20-%20Single%20file%20game/Prompt%201/Lantern%20Leap.html) | [02 — Leap (HTML)](../evidence/Leap%20-%20Single%20file%20game/Prompt%202/Leap.html) |
 | **Scope** | One stage, seven sparks | Ten stages, four difficulties, avatar customisation, traps and weapons |
 | **Original format** | Single self-contained HTML file | Single self-contained HTML file |
 
 **How to play:** Open either HTML link, choose GitHub's **Download raw file** option, then open the downloaded `.html` file on your computer in a web browser. Both source files are also available to inspect directly on GitHub.
+
+## Original prompts and screenshots
+
+### Prompt 1 — Basic
+
+[Read the original prompt](../evidence/Leap%20-%20Single%20file%20game/Prompt%201/Prompt.md)
+
+![Prompt 1 — original Codex conversation](../evidence/Leap%20-%20Single%20file%20game/Prompt%201/Screenshot.png)
+
+### Prompt 2 — Detailed
+
+[Read the original prompt](../evidence/Leap%20-%20Single%20file%20game/Prompt%202/Prompt.md)
+
+![Prompt 2 — original Codex conversation](../evidence/Leap%20-%20Single%20file%20game/Prompt%202/Screenshot.png)
 
 ## What the comparison demonstrates
 
@@ -34,5 +48,5 @@ The agent reported simulated checks across all stages and menus. **Actual Chrome
 
 ## Evidence
 
-Both original HTML builds are now published above, clearly labelled by prompt version. My prompt screenshots remain in my project records and have not yet been published in this repository.
+Both original HTML builds are now published above, clearly labelled by prompt version. My original prompts and Codex screenshots are published alongside each HTML game, grouped in the [Leap evidence folder](../evidence/Leap%20-%20Single%20file%20game/).
 

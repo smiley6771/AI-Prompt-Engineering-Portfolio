@@ -18,8 +18,8 @@ Using OpenAI Codex, I tested two prompts for single-file HTML platformers. The f
 
 | Version | Game | Files |
 | --- | --- | --- |
-| **Prompt 1 — Basic** | **Lantern Leap** — single level, seven collectibles | [View HTML source](games/01-lantern-leap-baseline.html) |
-| **Prompt 2 — Detailed** | **Leap** — ten stages, menus, difficulty options and combat | [View HTML source](games/02-leap-detailed-prompt.html) |
+| **Prompt 1 — Basic** | **Lantern Leap** — single level, seven collectibles | [View HTML source](evidence/Leap%20-%20Single%20file%20game/Prompt%201/Lantern%20Leap.html) |
+| **Prompt 2 — Detailed** | **Leap** — ten stages, menus, difficulty options and combat | [View HTML source](evidence/Leap%20-%20Single%20file%20game/Prompt%202/Leap.html) |
 
 Both files are standalone HTML games. To play a version locally, open its GitHub file page, select **Download raw file**, then open the downloaded `.html` file in a browser.
 
