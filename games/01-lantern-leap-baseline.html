@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lantern Leap</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100svh; display: grid; place-items: center; padding: 24px 12px;
+    background: radial-gradient(ellipse at top, #25284b, #100f1f 72%);
+    color: #fff2dc; font: 16px/1.5 system-ui, sans-serif;
+  }
+  main { width: min(100%, 920px); }
+  header, footer { display: flex; align-items: center; justify-content: space-between; gap: 10px 20px; flex-wrap: wrap; }
+  .eyebrow { color: #f8ad77; font-size: .72rem; font-weight: 800; letter-spacing: .19em; margin: 0; }
+  h1 { font-size: clamp(2rem, 6vw, 3.6rem); line-height: 1; margin: 5px 0 10px; }
+  p { margin: 0; }
+  .goal, footer { color: #d4c8e2; }
+  #hud { color: #ffdc88; font-weight: 750; }
+  .stage { position: relative; margin: 14px 0 10px; }
+  canvas { display: block; width: 100%; height: auto; border: 1px solid #665479; border-radius: 14px; }
+  #victory {
+    position: absolute; inset: 0; display: grid; place-content: center; text-align: center;
+    border-radius: 14px; background: #151327ed; padding: 12px;
+  }
+  #victory[hidden] { display: none; }
+  #victory h2 { font-size: clamp(1.2rem, 5vw, 2.5rem); margin: 0 0 4px; color: #ffdc88; }
+  button {
+    font: inherit; font-weight: 700; color: inherit; background: #28243d;
+    border: 1px solid #6d5a85; border-radius: 8px; padding: 8px 14px; cursor: pointer;
+  }
+  button:hover { background: #3b3254; }
+  button:focus-visible { outline: 3px solid #ffdc88; outline-offset: 3px; }
+  .touch { display: none; justify-content: space-between; gap: 10px; margin-top: 12px; }
+  .touch button { min-width: 60px; min-height: 48px; touch-action: none; user-select: none; }
+  @media (any-pointer: coarse) { .touch { display: flex; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <p class="eyebrow">DUSK VALLEY</p>
+      <h1>Lantern Leap</h1>
+      <p class="goal">Gather all seven sparks and relight the lantern at the far end of the valley.</p>
+    </div>
+    <p id="hud" aria-live="polite"></p>
+  </header>
+  <div class="stage">
+    <canvas id="game" width="900" height="460" aria-label="Lantern Leap platformer">This game requires canvas support.</canvas>
+    <div id="victory" role="status" hidden>
+      <h2>Lantern lit!</h2>
+      <p>You brought light back to Dusk Valley.</p>
+    </div>
+  </div>
+  <footer>
+    <p>Move with A / D or ← / →. Jump with Space, W or ↑.</p>
+    <button id="restart" type="button">Restart (R)</button>
+  </footer>
+  <div class="touch" aria-label="Touch controls">
+    <div>
+      <button type="button" data-move="ArrowLeft" aria-label="Move left">←</button>
+      <button type="button" data-move="ArrowRight" aria-label="Move right">→</button>
+    </div>
+    <button type="button" data-move="Space">Jump</button>
+  </div>
+</main>
+<script>
+"use strict";
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const hud = document.getElementById("hud");
+const victory = document.getElementById("victory");
+const platforms = [
+  { x: 0, y: 390, w: 230 }, { x: 278, y: 330, w: 132 },
+  { x: 460, y: 375, w: 138 }, { x: 654, y: 303, w: 146 },
+  { x: 857, y: 355, w: 121 }, { x: 1035, y: 282, w: 160 },
+  { x: 1252, y: 340, w: 113 }, { x: 1422, y: 265, w: 108 },
+  { x: 1586, y: 338, w: 264 }
+];
+const sparks = platforms.slice(1, -1).map(({ x, y, w }) => ({
+  x: x + w / 2, y: y - 30, collected: false
+}));
+const goal = { x: 1762, y: 270, w: 52, h: 68 };
+const worldWidth = 1850;
+const checkpoint = platforms[4];
+const player = { x: 54, y: 354, w: 26, h: 36, vy: 0, facing: 1, grounded: true };
+const left = ["ArrowLeft", "KeyA"];
+const right = ["ArrowRight", "KeyD"];
+const jump = ["Space", "ArrowUp", "KeyW"];
+const gameKeys = [...left, ...right, ...jump, "KeyR"];
+const keys = new Set();
+const pointers = new Map();
+let camera = 0;
+let jumpBuffer = 0;
+let grace = 0;
+let sparkCount = 0;
+let falls = 0;
+let checkpointReached = false;
+let won = false;
+
+function showStatus(message = "") {
+  const status = `${sparkCount} / ${sparks.length} sparks · Falls ${falls}${message ? " · " + message : ""}`;
+  if (hud.textContent !== status) hud.textContent = status;
+}
+
+function respawn() {
+  const deck = checkpointReached ? checkpoint : platforms[0];
+  player.x = deck.x + (checkpointReached ? 14 : 54);
+  player.y = deck.y - player.h;
+  player.vy = 0;
+  player.facing = 1;
+  player.grounded = true;
+  jumpBuffer = 0;
+  grace = 0;
+  updateCamera();
+}
+
+function restart() {
+  sparkCount = 0;
+  falls = 0;
+  won = false;
+  checkpointReached = false;
+  for (const spark of sparks) spark.collected = false;
+  victory.hidden = true;
+  respawn();
+  showStatus();
+}
+
+function held(codes) {
+  return codes.some(code => keys.has(code) || [...pointers.values()].includes(code));
+}
+
+window.addEventListener("keydown", event => {
+  if (!gameKeys.includes(event.code) || event.altKey || event.ctrlKey || event.metaKey) return;
+  if (event.code === "Space" && event.target instanceof HTMLButtonElement) return;
+  event.preventDefault();
+  keys.add(event.code);
+  if (event.repeat) return;
+  if (jump.includes(event.code)) jumpBuffer = 7;
+  if (event.code === "KeyR") restart();
+});
+window.addEventListener("keyup", event => keys.delete(event.code));
+window.addEventListener("blur", () => {
+  keys.clear();
+  pointers.clear();
+  jumpBuffer = 0;
+});
+document.getElementById("restart").addEventListener("click", restart);
+for (const button of document.querySelectorAll("[data-move]")) {
+  button.addEventListener("pointerdown", event => {
+    event.preventDefault();
+    button.setPointerCapture(event.pointerId);
+    pointers.set(event.pointerId, button.dataset.move);
+    if (button.dataset.move === "Space") jumpBuffer = 7;
+  });
+  button.addEventListener("lostpointercapture", event => pointers.delete(event.pointerId));
+  button.addEventListener("click", event => {
+    if (event.detail === 0 && button.dataset.move === "Space") jumpBuffer = 7;
+  });
+}
+
+function updateCamera() {
+  camera = Math.max(0, Math.min(player.x - 300, worldWidth - canvas.width));
+}
+
+function overlaps(box) {
+  return player.x < box.x + box.w && player.x + player.w > box.x
+    && player.y < box.y + box.h && player.y + player.h > box.y;
+}
+
+function update() {
+  if (won) return;
+  const direction = Number(held(right)) - Number(held(left));
+  if (direction) player.facing = direction;
+  if (player.grounded) grace = 6;
+  if (jumpBuffer > 0 && grace > 0) {
+    player.vy = -11.8;
+    grace = 0;
+    jumpBuffer = 0;
+  }
+  jumpBuffer = Math.max(0, jumpBuffer - 1);
+  grace = Math.max(0, grace - 1);
+
+  const oldFeet = player.y + player.h;
+  player.x = Math.max(0, Math.min(worldWidth - player.w, player.x + direction * 4.4));
+  player.vy += 0.52;
+  player.y += player.vy;
+  player.grounded = false;
+
+  // Land only when falling through the top of a platform.
+  for (const deck of platforms) {
+    if (player.vy < 0 || oldFeet > deck.y || player.y + player.h < deck.y) continue;
+    if (player.x >= deck.x + deck.w || player.x + player.w <= deck.x) continue;
+    player.y = deck.y - player.h;
+    player.vy = 0;
+    player.grounded = true;
+    if (deck === checkpoint && !checkpointReached) {
+      checkpointReached = true;
+      showStatus("Checkpoint");
+    }
+    break;
+  }
+
+  if (player.y > canvas.height + 10) {
+    falls += 1;
+    respawn();
+    showStatus();
+    return;
+  }
+
+  for (const spark of sparks) {
+    if (spark.collected || !overlaps({ x: spark.x - 12, y: spark.y - 12, w: 24, h: 24 })) continue;
+    spark.collected = true;
+    sparkCount += 1;
+    showStatus();
+  }
+  if (overlaps(goal)) {
+    if (sparkCount === sparks.length) {
+      won = true;
+      victory.hidden = false;
+      showStatus("Lantern lit");
+    } else {
+      showStatus(`${sparks.length - sparkCount} sparks needed`);
+    }
+  }
+  updateCamera();
+}
+
+function box(color, x, y, w, h) {
+  ctx.fillStyle = color;
+  ctx.fillRect(x, y, w, h);
+}
+
+function circle(color, x, y, radius) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function ridge(color, offset, height) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(0, canvas.height);
+  for (let x = -160; x <= 1060; x += 80) {
+    const n = (x + 160) / 80;
+    ctx.lineTo(x - offset, height + Math.sin(n * 2.34) * 35 + Math.cos(n * 1.2) * 27);
+  }
+  ctx.lineTo(canvas.width, canvas.height);
+  ctx.closePath();
+  ctx.fill();
+}
+
+const sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
+sky.addColorStop(0, "#181934");
+sky.addColorStop(1, "#78486a");
+
+function draw(time) {
+  box(sky, 0, 0, canvas.width, canvas.height);
+  const moonX = 705 - camera * 0.06;
+  circle("#a57288", moonX, 111, 54);
+  circle("#ffcd9e", moonX, 111, 44);
+  for (let i = 0; i < 42; i++) {
+    const x = (i * 173 + 90 - camera * 0.1 + canvas.width) % canvas.width;
+    circle(i % 4 ? "#c4a7c1" : "#ffe4b5", x, 18 + (i * 67 % 163), i % 4 ? 1 : 1.5);
+  }
+  ridge("#4c3c62", camera * 0.055, 243);
+  ridge("#352c4b", camera * 0.12, 320);
+  box("#261f38", 0, 427, canvas.width, 33);
+
+  ctx.save();
+  ctx.translate(-Math.round(camera), 0);
+  for (const deck of platforms) {
+    box("#191a30", deck.x, deck.y, deck.w, deck === platforms[0] ? 70 : 21);
+    box("#776a91", deck.x, deck.y, deck.w, 4);
+    box("#292942", deck.x + 5, deck.y + 9, deck.w - 10, 5);
+  }
+
+  for (const spark of sparks) {
+    if (spark.collected) continue;
+    const y = spark.y + Math.sin(time / 240 + spark.x / 100) * 4;
+    circle("#ffe09a33", spark.x, y, 14);
+    ctx.save();
+    ctx.translate(spark.x, y);
+    ctx.rotate(Math.PI / 4);
+    box("#ffcc73", -6, -6, 12, 12);
+    box("#fff1bd", -4, -4, 5, 5);
+    ctx.restore();
+  }
+
+  box("#1a192f", checkpoint.x + 11, checkpoint.y - 55, 4, 55);
+  box(checkpointReached ? "#8aebc4" : "#b6a6c3", checkpoint.x + 15, checkpoint.y - 55, 23, 13);
+  const ready = sparkCount === sparks.length;
+  circle(ready ? "#ffd17a40" : "#c5b0d025", goal.x + 26, goal.y + 25, 33);
+  box("#211d33", goal.x + 23, goal.y + 33, 6, 35);
+  box("#211d33", goal.x + 10, goal.y + 8, 32, 34);
+  box(ready ? "#ffcf76" : "#6c607e", goal.x + 15, goal.y + 13, 22, 24);
+  box("#211d33", goal.x + 24, goal.y + 13, 4, 24);
+
+  const x = Math.round(player.x);
+  const y = Math.round(player.y);
+  box("#17162a", x + 4, y + 29, 7, 7);
+  box("#17162a", x + 16, y + 29, 7, 7);
+  box("#67c0ba", x + 2, y + 12, 22, 19);
+  box("#f6cbad", x + 4, y + 4, 18, 13);
+  box("#363050", x + 2, y, 22, 6);
+  box("#211d33", x + (player.facing > 0 ? 17 : 7), y + 8, 3, 4);
+  box("#f5a96f", x, y + 16, 26, 4);
+  ctx.restore();
+}
+
+let previous = null;
+let lag = 0;
+const step = 1000 / 60;
+function frame(time) {
+  if (previous !== null) lag += Math.min(time - previous, 100);
+  previous = time;
+  while (lag >= step) {
+    update();
+    lag -= step;
+  }
+  draw(time);
+  requestAnimationFrame(frame);
+}
+
+restart();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
