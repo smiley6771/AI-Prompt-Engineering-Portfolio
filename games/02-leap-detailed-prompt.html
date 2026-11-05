@@ -1,0 +1,1132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#111020">
+<title>LEAP · Parallax Arcade</title>
+<style>
+  :root {
+    color-scheme: dark; --ink: #151326; --panel: #211e36; --line: #46405e;
+    --ivory: #fff1da; --muted: #c7bdd4; --gold: #ffd270; --mint: #8ff4cf;
+    font: 15px/1.45 "Courier New", monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100svh; padding: 24px 12px;
+    background: radial-gradient(ellipse at 50% 0%, #33284d 0%, #151326 55%, #0e0d18 100%);
+    color: var(--ivory); display: grid; justify-items: center; align-content: center;
+  }
+  h1, h2, h3, p { margin: 0; }
+  main { width: min(100%, 1060px); }
+  .mast, .legend, .topline, .row, .toolbar {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px 14px; flex-wrap: wrap;
+  }
+  .mast { padding: 0 3px 10px; color: var(--muted); }
+  .brand { color: var(--ivory); font-weight: 800; letter-spacing: .13em; }
+  .brand span { color: var(--mint); }
+  .badge, .kicker { letter-spacing: .15em; font-size: .73rem; font-weight: 800; text-transform: uppercase; }
+  .kicker { color: var(--mint); }
+  .cabinet {
+    border: 1px solid #665c7b; border-radius: 12px; overflow: hidden;
+    background: var(--ink); box-shadow: 0 9px 0 #080812, 0 24px 65px #090811bf;
+  }
+  .topline { padding: 9px 12px; min-height: 47px; border-bottom: 1px solid var(--line); background: #211c33; }
+  .topline strong { color: var(--gold); }
+  .meters { display: flex; align-items: center; gap: 8px 14px; flex-wrap: wrap; }
+  #hp { color: #ff9b9c; white-space: nowrap; }
+  #sectors { color: var(--mint); letter-spacing: .14em; }
+  .screen { position: relative; display: grid; overflow: hidden; background: #201934; }
+  canvas { display: block; width: 100%; height: auto; aspect-ratio: 16/9; image-rendering: pixelated; grid-area: 1/1; }
+  .glass {
+    grid-area: 1/1; z-index: 1; pointer-events: none;
+    background: repeating-linear-gradient(transparent 0 3px, #0a091411 3px 4px);
+    box-shadow: inset 0 0 60px #0a091442;
+  }
+  [hidden] { display: none !important; }
+  #overlay {
+    position: absolute; inset: 0; z-index: 2; overflow: auto; display: flex; flex-direction: column;
+    justify-content: safe center; align-items: center; padding: clamp(10px, 2vw, 26px);
+    background: #171328d9;
+  }
+  #overlay[data-view="menu"] {
+    align-items: flex-start; background: linear-gradient(90deg, #151226 8%, #171328dc 47%, #17132808 84%);
+    padding-inline: clamp(12px, 5vw, 58px);
+  }
+  #overlay[data-view="menu"] .panel { width: min(390px, 100%); border: 0; padding: 0; background: transparent; box-shadow: none; }
+  .panel {
+    width: min(100%, 640px); padding: clamp(12px, 3vw, 26px);
+    background: #201d32; border: 1px solid #716484; box-shadow: 5px 5px #0b0917;
+  }
+  .panel h2 { color: var(--ivory); font-size: clamp(1.3rem, 3vw, 2rem); line-height: 1.1; margin: 3px 0 10px; }
+  .panel p { color: var(--muted); }
+  .title {
+    margin: 2px 0 4px; color: var(--gold); font: 1000 clamp(3.1rem, 10vw, 7rem)/.85 system-ui, sans-serif;
+    letter-spacing: -.09em; text-shadow: 3px 3px #a35b65, 6px 6px #48334f;
+  }
+  .tagline { margin: 14px 0 16px; max-width: 34ch; }
+  .buttons, .choices, .stage-grid { display: grid; gap: 8px; }
+  .buttons, .choices { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stage-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); margin: 12px 0; }
+  .stack { display: grid; gap: 9px; margin-top: 12px; }
+  .mini { font-size: .78rem; }
+  .panel .selection { color: var(--mint); margin-top: 11px; font-size: .8rem; }
+  .panel .help { margin-bottom: 8px; }
+  button {
+    color: var(--ivory); background: #312942; border: 1px solid #6c5d81; border-radius: 3px;
+    box-shadow: 0 2px #100d1b; min-height: 34px; padding: 6px 10px;
+    font: 800 .85rem/1.2 "Courier New", monospace; cursor: pointer; text-align: center;
+  }
+  button:hover:enabled { background: #4b3957; border-color: #c3a7b9; }
+  button:active:enabled { transform: translateY(1px); box-shadow: 0 1px #100d1b; }
+  button:focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; }
+  button:disabled { cursor: default; opacity: .52; }
+  button.primary { background: var(--gold); color: #21182a; border-color: #ffe6a5; }
+  button.primary:hover:enabled { background: #ffe3a2; }
+  button[aria-pressed="true"] { border-color: var(--mint); color: var(--mint); }
+  #pause { min-height: 28px; }
+  #avatar-preview { width: 82px; height: 82px; border: 1px solid var(--line); background: #151326; }
+  .avatar-area { display: grid; grid-template-columns: 82px 1fr; gap: 14px; align-items: center; }
+  .swatches { display: flex; flex-wrap: wrap; gap: 6px; }
+  .swatches button { width: 31px; min-height: 30px; padding: 4px; }
+  .swatches span { display: block; width: 100%; height: 17px; border: 1px solid #fff7; }
+  .legend { padding: 8px 12px; color: var(--muted); font-size: .77rem; }
+  #touch { display: none; padding: 9px; gap: 6px; justify-content: space-between; }
+  #touch div { display: flex; gap: 5px; }
+  #touch button { min-height: 44px; min-width: 43px; touch-action: none; user-select: none; }
+  @media (any-pointer: coarse) { #touch { display: flex; } }
+  @media (max-width: 630px) {
+    body { padding: 12px 6px; }
+    .mast { font-size: .75rem; }
+    .screen:has(#overlay:not([hidden])) { min-height: 275px; }
+    .panel { padding: 10px; }
+    .panel h2 { margin-bottom: 6px; }
+    .tagline { margin: 9px 0; font-size: .8rem; }
+    .buttons, .choices, .stage-grid, .stack { gap: 5px; }
+    .stage-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    button { font-size: .74rem; padding: 5px; min-height: 30px; }
+    .legend { font-size: .69rem; }
+  }
+  @media (prefers-reduced-motion: reduce) { button:active:enabled { transform: none; } }
+</style>
+</head>
+<body>
+<main>
+  <header class="mast">
+    <p class="brand"><span>◆</span> PARALLAX ARCADE</p>
+    <p class="badge">VOL. 01 &nbsp;·&nbsp; OFFLINE EDITION</p>
+  </header>
+  <div class="cabinet">
+    <div class="topline">
+      <p id="stage-label"><strong>LEAP</strong> &nbsp;/&nbsp; STANDBY</p>
+      <div id="meters" class="meters" hidden>
+        <span id="hp" aria-label="Health"></span><span id="sectors" aria-label="Sectors"></span>
+        <span id="clock">0:00</span><span id="weapon"></span>
+        <button id="pause" type="button">Pause</button>
+      </div>
+      <p id="standby" class="badge">SYSTEM READY</p>
+    </div>
+    <div class="screen">
+      <canvas id="game" width="768" height="432" aria-label="Leap playfield">This game requires Canvas support.</canvas>
+      <div class="glass" aria-hidden="true"></div>
+      <div id="overlay" data-view="menu"></div>
+    </div>
+    <div id="touch" hidden aria-label="Touch controls">
+      <div>
+        <button type="button" data-key="ArrowLeft" aria-label="Move left">◀</button>
+        <button type="button" data-key="ArrowRight" aria-label="Move right">▶</button>
+      </div>
+      <div>
+        <button type="button" data-key="KeyE">Use</button>
+        <button type="button" data-key="KeyK">Swap</button>
+        <button type="button" data-key="KeyJ">Fire</button>
+        <button type="button" data-key="Space">Jump</button>
+      </div>
+    </div>
+    <div class="legend">
+      <span>← / → MOVE &nbsp;·&nbsp; SPACE JUMP &nbsp;·&nbsp; J FIRE &nbsp;·&nbsp; K SWAP &nbsp;·&nbsp; E USE</span>
+      <span id="notice" role="status">10 STAGES / 4 MODES</span>
+    </div>
+  </div>
+</main>
+<script>
+"use strict";
+
+const $ = id => document.getElementById(id);
+const canvas = $("game");
+const ctx = canvas.getContext("2d");
+const W = canvas.width;
+const H = canvas.height;
+const FLOOR = 348;
+const ROOM = 440;
+const ROOMS = 40;
+const SECTOR = 8;
+const SPEED = 4.6;
+const STEP = 1000 / 60;
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const clamp = (n, lo, hi) => Math.max(lo, Math.min(n, hi));
+const between = (n, lo, hi) => n >= lo && n <= hi;
+const overlap = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+
+const MODES = {
+  easy:    { label: "Easy",    hp: 7, pace: .80, fire: 154, shot: 3.0, armor: 0, grace: 106 },
+  medium:  { label: "Medium",  hp: 5, pace: 1.00, fire: 120, shot: 3.7, armor: 0, grace: 92 },
+  hard:    { label: "Hard",    hp: 4, pace: 1.21, fire: 94,  shot: 4.5, armor: 1, grace: 80 },
+  extreme: { label: "Extreme", hp: 3, pace: 1.43, fire: 71,  shot: 5.3, armor: 2, grace: 66 }
+};
+
+const COLORS = [
+  ["Amber", "#ffd270"], ["Mint", "#8ff4cf"], ["Coral", "#ffa5a6"],
+  ["Ice", "#a6d8ff"], ["Lilac", "#d8abff"], ["Pearl", "#faf1d8"]
+];
+const RIGS = ["Runner", "Pilot", "Scout"];
+
+// Each stage orders its terrain patterns independently and has its own skyline and hazard rotation.
+const STAGES = [
+  ["Switchyard",       "Freight rails in the evening haze.",    "#252047", "#795375", "#514164", "#37304d", "#ffcb86", "rail",   "ABACDBEF", ["spikes", "saw", "turret", "walker"]],
+  ["Copper Drain",     "A pump station below the city.",         "#143244", "#467980", "#325665", "#233e4f", "#ffb58d", "pipes",  "BCDFACGE", ["press", "spikes", "walker", "mine"]],
+  ["Glass Canopy",     "Greenhouse spans suspended in fog.",     "#19363b", "#6f8f69", "#406756", "#26463d", "#d7ef9e", "canopy", "CAEGBDFH", ["saw", "mine", "turret", "spikes"]],
+  ["Static Foundry",   "Hot iron and live conductors.",          "#391f35", "#a75953", "#70404e", "#442a3d", "#ffc176", "pipes",  "DGHBCFAE", ["press", "laser", "turret", "walker"]],
+  ["Floodline",        "Maintenance walkways over black water.", "#18294b", "#477495", "#345678", "#273950", "#b1efff", "water",  "EFCGABHD", ["mine", "laser", "saw", "walker"]],
+  ["Violet Divide",    "Abandoned pylons on the ridge.",         "#282144", "#775e9a", "#534671", "#373153", "#e1b3ff", "ridge",  "FADHECGB", ["laser", "saw", "turret", "mine"]],
+  ["Ash Terminal",     "A loading depot under falling ash.",     "#35243e", "#956359", "#6a4b55", "#453243", "#ffc297", "rail",   "GBEFHDAC", ["press", "mine", "walker", "turret"]],
+  ["Neon Quarry",      "Mining rigs light the canyon floor.",    "#182d43", "#785785", "#4e426a", "#333149", "#82f2dd", "ridge",  "HCFDAEGB", ["saw", "laser", "press", "walker"]],
+  ["Signal Spire",     "Climb through the antenna array.",        "#29264b", "#675f9f", "#4c4980", "#343559", "#fff0a9", "canopy", "CFHAEGDB", ["turret", "laser", "press", "mine"]],
+  ["Last Light",       "The final relay is still transmitting.", "#331e3e", "#a45b80", "#684566", "#472d50", "#ffe1a0", "water",  "HEGFDACB", ["laser", "press", "turret", "saw"]]
+].map(([name, blurb, sky, glow, far, near, light, skyline, order, threats]) =>
+  ({ name, blurb, sky, glow, far, near, light, skyline, order, threats }));
+
+// Coordinates are local to a room. The second entry in each ledge is its height above the floor.
+const TERRAIN = {
+  A: { gaps: [[186, 74]], ledges: [[130, 52, 58], [256, 60, 73]], hazard: 333 },
+  B: { gaps: [[269, 90]], ledges: [[75, 55, 92], [226, 66, 58], [350, 55, 59]], hazard: 170 },
+  C: { gaps: [[112, 64], [279, 70]], ledges: [[102, 54, 73], [204, 68, 69], [316, 54, 67]], hazard: 221 },
+  D: { gaps: [[196, 97]], ledges: [[47, 48, 96], [170, 65, 60], [270, 72, 76]], hazard: 108 },
+  E: { gaps: [[310, 82]], ledges: [[111, 57, 68], [220, 54, 76], [297, 70, 64]], hazard: 180 },
+  F: { gaps: [[117, 82]], ledges: [[55, 65, 80], [177, 61, 84], [286, 68, 81]], hazard: 319 },
+  G: { gaps: [[227, 77]], ledges: [[77, 46, 91], [170, 88, 67], [298, 58, 71]], hazard: 130 },
+  H: { gaps: [[98, 74], [300, 85]], ledges: [[65, 54, 64], [186, 60, 89], [310, 63, 67]], hazard: 234 }
+};
+
+const WEAPONS = [
+  { name: "PULSE", cost: 13, cooldown: 14, speed: 9, range: 34, spread: [0], damage: 2, color: "#a8ffe0" },
+  { name: "SCATTER", cost: 23, cooldown: 27, speed: 7, range: 21, spread: [-2, 0, 2], damage: 1, color: "#ffd17a" }
+];
+
+const saveKey = "leap.parallax.v1";
+const defaults = { mode: "medium", color: 0, rig: 0, unlocked: 0, sound: true, best: {}, caches: [] };
+let settings = { ...defaults, best: {}, caches: [] };
+try {
+  const saved = JSON.parse(localStorage.getItem(saveKey));
+  if (saved && typeof saved === "object") {
+    if (Object.hasOwn(MODES, saved.mode)) settings.mode = saved.mode;
+    if (Number.isInteger(saved.color)) settings.color = clamp(saved.color, 0, COLORS.length - 1);
+    if (Number.isInteger(saved.rig)) settings.rig = clamp(saved.rig, 0, RIGS.length - 1);
+    if (Number.isInteger(saved.unlocked)) settings.unlocked = clamp(saved.unlocked, 0, STAGES.length - 1);
+    if (typeof saved.sound === "boolean") settings.sound = saved.sound;
+    if (saved.best && typeof saved.best === "object") settings.best = saved.best;
+    if (Array.isArray(saved.caches)) settings.caches = [...new Set(saved.caches.filter(n => Number.isInteger(n) && between(n, 0, 4)))];
+  }
+} catch {}
+function persist() {
+  try { localStorage.setItem(saveKey, JSON.stringify(settings)); } catch {}
+}
+
+const left = ["ArrowLeft", "KeyA"];
+const right = ["ArrowRight", "KeyD"];
+const jumping = ["Space", "ArrowUp", "KeyW"];
+const firing = ["KeyJ", "KeyX"];
+const swapping = ["KeyK", "KeyC"];
+const inputs = [...left, ...right, ...jumping, ...firing, ...swapping, "KeyE"];
+const keys = new Set();
+const pointers = new Map();
+let view = "menu";
+let game = null;
+let audio = null;
+let lastHud = "";
+
+let toastFor = 0;
+
+function tone(kind) {
+  if (!settings.sound) return;
+  const tones = {
+    menu: [360, 500, .07, .035], jump: [170, 390, .10, .04], fire: [360, 110, .075, .03],
+    hit: [135, 53, .16, .065], fall: [200, 46, .24, .06], relay: [400, 870, .26, .045],
+    clear: [380, 1040, .45, .07], cache: [660, 1280, .36, .06]
+  };
+  try {
+    const Audio = window.AudioContext || window.webkitAudioContext;
+    if (!Audio) return;
+    audio ??= new Audio();
+    if (audio.state === "suspended") audio.resume().catch(() => {});
+    const [start, end, duration, volume] = tones[kind];
+    const now = audio.currentTime;
+    const oscillator = audio.createOscillator();
+    const gain = audio.createGain();
+    oscillator.type = "square";
+    oscillator.frequency.setValueAtTime(start, now);
+    oscillator.frequency.exponentialRampToValueAtTime(end, now + duration);
+    gain.gain.setValueAtTime(volume, now);
+    gain.gain.exponentialRampToValueAtTime(.001, now + duration);
+    oscillator.connect(gain).connect(audio.destination);
+    oscillator.start(now);
+    oscillator.stop(now + duration);
+  } catch {}
+}
+const cacheRoutes = [[0, 17, 1], [2, 27, 0], [4, 22, 2], [7, 12, 1], [9, 34, 0]];
+const TOTAL = ROOM * ROOMS;
+const EXIT = TOTAL - 105;
+
+function buildStage(index) {
+  const theme = STAGES[index];
+  const decks = [];
+  const gaps = [];
+  const threats = [];
+  let cache = null;
+  for (let room = 0; room < ROOMS; room++) {
+    const start = room * ROOM;
+    const sector = Math.floor(room / SECTOR);
+    if (room % SECTOR === 0 || room === ROOMS - 1) {
+      decks.push({ x: start, y: FLOOR, w: ROOM, ground: true });
+      continue;
+    }
+
+    const code = theme.order[(room + sector * (1 + index % 3)) % theme.order.length];
+    const layout = TERRAIN[code];
+    let edge = 0;
+    for (const [x, width] of layout.gaps) {
+      decks.push({ x: start + edge, y: FLOOR, w: x - edge, ground: true });
+      gaps.push({ x: start + x, w: width });
+      edge = x + width;
+    }
+    decks.push({ x: start + edge, y: FLOOR, w: ROOM - edge, ground: true });
+    const ledges = layout.ledges.map(([x, height, width]) => ({
+      x: start + x, y: FLOOR - height, w: width, ground: false
+    }));
+    decks.push(...ledges);
+    const type = theme.threats[(room + sector + Math.floor(room / 3)) % theme.threats.length];
+    const hazardX = start + layout.hazard;
+    threats.push({ type, x: hazardX, base: hazardX, room, phase: room * 31 + index * 19 });
+    if (sector >= 2 && room % 4 === 3 && ["turret", "walker"].includes(type) === false) {
+      const ledge = ledges[0];
+      threats.push({
+        type: sector === 2 ? "walker" : "turret", x: ledge.x + ledge.w / 2, base: ledge.x + ledge.w / 2,
+        room, phase: room * 17, deck: ledge
+      });
+    }
+
+    const id = cacheRoutes.findIndex(([stage, slot]) => stage === index && slot === room);
+    if (id >= 0) {
+      const deck = ledges[cacheRoutes[id][2] % ledges.length];
+      cache = { id, x: deck.x + deck.w * .72, y: deck.y - 15 };
+    }
+  }
+
+  const relays = Array.from({ length: ROOMS / SECTOR - 1 }, (_, i) => (i + 1) * SECTOR * ROOM + 104);
+  return { theme, decks, gaps, threats, relays, cache };
+}
+
+function initThreat(threat, mode) {
+  threat.x = threat.base;
+  threat.cooldown = 25 + threat.phase % mode.fire;
+  threat.hp = (threat.type === "turret" ? 3 : 2) + mode.armor;
+  threat.spent = false;
+}
+
+function startStage(index) {
+  const level = buildStage(index);
+  const mode = MODES[settings.mode];
+  for (const threat of level.threats) initThreat(threat, mode);
+  game = {
+    index, level, mode, modeKey: settings.mode, time: 0, deaths: 0, camera: 0, reached: 0,
+    shots: [], particles: [], energy: 100, weapon: 0, cooldown: 0, jumpQueue: 0, coyote: 0, invincible: 0,
+    player: { x: 46, y: FLOOR - 28, w: 19, h: 28, vy: 0, facing: 1, grounded: true, hp: mode.hp }
+  };
+  setView("play");
+  announce(level.theme.blurb, 170);
+}
+
+function announce(message, duration = 120) {
+
+  toastFor = duration;
+  if ($("notice").textContent !== message) $("notice").textContent = message;
+}
+
+function formatTime(frames) {
+  const seconds = Math.floor(frames / 60);
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+}
+
+function updateHud() {
+  const { player, reached, time, weapon, energy } = game;
+  const marks = "◆".repeat(reached) + "◇".repeat(game.level.relays.length - reached);
+  const charge = Math.ceil(energy / 10) * 10;
+  const next = [player.hp, marks, formatTime(time), weapon, charge].join("|");
+  if (next === lastHud) return;
+  lastHud = next;
+  $("hp").textContent = "♥".repeat(player.hp);
+  $("hp").setAttribute("aria-label", `Health ${player.hp} of ${game.mode.hp}`);
+  $("sectors").textContent = marks;
+  $("sectors").setAttribute("aria-label", `Relays ${reached} of ${game.level.relays.length}`);
+  $("clock").textContent = formatTime(time);
+  $("weapon").textContent = `${WEAPONS[weapon].name} ${charge}%`;
+}
+
+function clearInput() {
+  keys.clear();
+  pointers.clear();
+  if (game) game.jumpQueue = 0;
+}
+
+function held(codes) {
+  for (const code of codes) {
+    if (keys.has(code)) return true;
+    for (const active of pointers.values()) if (active === code) return true;
+  }
+  return false;
+}
+
+function press(code) {
+  if (jumping.includes(code)) game.jumpQueue = 7;
+  if (swapping.includes(code)) {
+    game.weapon = 1 - game.weapon;
+    tone("menu");
+    updateHud();
+  }
+  if (code === "KeyE") useNearby();
+}
+
+function useNearby() {
+  const cache = game.level.cache;
+  const p = game.player;
+  if (!cache || settings.caches.includes(cache.id)) return;
+  if (Math.abs(p.x + p.w / 2 - cache.x) > 19 || Math.abs(p.y + 14 - cache.y) > 18) return;
+  settings.caches.push(cache.id);
+  persist();
+  tone("cache");
+  burst(cache.x, cache.y, "#fff1bb", 18);
+  announce("Unregistered signal recovered.");
+}
+
+function movePlayer() {
+  const p = game.player;
+  const motion = Number(held(right)) - Number(held(left));
+  if (motion) p.facing = motion;
+  if (p.grounded) game.coyote = 6;
+  if (game.jumpQueue > 0 && game.coyote > 0) {
+    game.jumpQueue = 0;
+    game.coyote = 0;
+    p.vy = -11.45;
+    tone("jump");
+    burst(p.x + p.w / 2, p.y + p.h, "#d5bfd3", 5);
+  }
+  game.jumpQueue = Math.max(0, game.jumpQueue - 1);
+  game.coyote = Math.max(0, game.coyote - 1);
+  const feet = p.y + p.h;
+  p.x = clamp(p.x + motion * SPEED, 0, TOTAL - p.w);
+  p.vy = Math.min(14, p.vy + .55);
+  p.y += p.vy;
+  p.grounded = false;
+  if (p.vy < 0) return;
+
+  let landing = null;
+  for (const deck of game.level.decks) {
+    if (feet <= deck.y && p.y + p.h >= deck.y && p.x < deck.x + deck.w && p.x + p.w > deck.x
+        && (!landing || deck.y < landing.y)) landing = deck;
+  }
+  if (landing) {
+    if (p.vy > 5) burst(p.x + p.w / 2, landing.y, "#b999bc", 3);
+    p.y = landing.y - p.h;
+    p.vy = 0;
+    p.grounded = true;
+  }
+}
+
+function respawn() {
+  const { player: p, reached, mode, level } = game;
+  game.deaths++;
+  p.x = reached ? level.relays[reached - 1] + 23 : 46;
+  p.y = FLOOR - p.h;
+  p.vy = 0;
+  p.hp = mode.hp;
+  p.facing = 1;
+  p.grounded = true;
+  game.energy = 100;
+  game.cooldown = 0;
+  game.jumpQueue = 0;
+  game.coyote = 0;
+  game.invincible = mode.grace;
+  game.shots = [];
+  game.particles = [];
+  game.camera = clamp(p.x - 226, 0, TOTAL - W);
+  const sector = Math.floor(p.x / (ROOM * SECTOR));
+  for (const threat of level.threats) {
+    if (Math.floor(threat.room / SECTOR) === sector) initThreat(threat, mode);
+  }
+  tone("fall");
+  announce(`Recovered at ${reached ? "relay " + reached : "stage start"} · Retries ${game.deaths}`);
+}
+
+function hit() {
+  if (game.invincible > 0) return;
+  const p = game.player;
+  p.hp--;
+  if (p.hp <= 0) {
+    respawn();
+    return;
+  }
+  game.invincible = game.mode.grace;
+  burst(p.x + p.w / 2, p.y + 12, "#ff9c9e", 12);
+  tone("hit");
+}
+
+function launch(x, y, vx, vy, life, hostile, color, damage = 1) {
+  game.shots.push({ x, y, vx, vy, life, hostile, color, damage, w: hostile ? 6 : 8, h: 4 });
+}
+
+function fireWeapon() {
+  const { player: p, weapon } = game;
+  const arm = WEAPONS[weapon];
+  if (game.cooldown > 0 || game.energy < arm.cost) return;
+  game.energy -= arm.cost;
+  game.cooldown = arm.cooldown;
+  for (const vy of arm.spread) {
+    launch(p.x + (p.facing > 0 ? p.w : -8), p.y + 13, p.facing * arm.speed, vy, arm.range, false, arm.color, arm.damage);
+  }
+  tone("fire");
+}
+
+function threatBox(t) {
+  const floor = t.deck?.y ?? FLOOR;
+  const cycle = (game.time * game.mode.pace + t.phase) % 160;
+  switch (t.type) {
+    case "walker": return { x: t.x - 11, y: floor - 20, w: 22, h: 20, active: t.hp > 0 };
+    case "turret": return { x: t.x - 12, y: floor - 22, w: 24, h: 22, active: t.hp > 0 };
+    case "spikes": return { x: t.x - 19, y: floor - 16, w: 38, h: 16, active: cycle >= 54 && cycle < 116, warning: cycle >= 35 && cycle < 54 };
+    case "laser":  return { x: t.x - 6, y: floor - 77, w: 12, h: 77, active: cycle >= 70 && cycle < 108, warning: cycle >= 47 && cycle < 70 };
+    case "saw":    return { x: t.x - 14, y: floor - 31 - Math.round(Math.sin(cycle / 160 * Math.PI * 2) * 17), w: 28, h: 28, active: true };
+    case "press": {
+      const extension = cycle < 57 || cycle >= 131 ? 0 : clamp((cycle - 57) / 13, 0, 1) * clamp((131 - cycle) / 20, 0, 1);
+      return { x: t.x - 15, y: floor - 104 + Math.round(80 * extension), w: 30, h: 24, active: extension > .25, warning: cycle >= 35 && cycle < 57 };
+    }
+    case "mine": return { x: t.x - 12, y: floor - 11, w: 24, h: 11, active: !t.spent };
+  }
+}
+
+function stepThreat(t) {
+  const p = game.player;
+  if (t.type === "walker" && t.hp > 0) {
+    const range = t.deck ? Math.min(21, t.deck.w / 2 - 12) : 23;
+    t.x = t.base + Math.sin((game.time * game.mode.pace + t.phase) / 29) * range;
+  }
+  const box = threatBox(t);
+  if (t.type === "turret" && t.hp > 0) {
+    t.cooldown--;
+    if (t.cooldown <= 0 && Math.abs(t.x - p.x) < 365) {
+      const dir = p.x + p.w / 2 < t.x ? -1 : 1;
+      const vy = clamp((p.y + 10 - box.y) / 55, -1.8, 1.2);
+      launch(t.x + dir * 12, box.y + 7, game.mode.shot * dir, vy, 135, true, "#ff879a");
+      t.cooldown = game.mode.fire;
+    }
+  }
+  if (box.active && overlap(p, box)) {
+    if (t.type === "mine") {
+      t.spent = true;
+      burst(t.x, FLOOR - 8, "#ffd090", 12);
+    }
+    hit();
+  }
+}
+
+function impact(shot, nearby) {
+  if (shot.hostile) {
+    if (!overlap(shot, game.player)) return false;
+    hit();
+    return true;
+  }
+  for (const t of nearby) {
+    if (!["walker", "turret", "mine"].includes(t.type)) continue;
+    const box = threatBox(t);
+    if (!box.active || !overlap(shot, box)) continue;
+    if (t.type === "mine") t.spent = true;
+    else t.hp -= shot.damage;
+    burst(shot.x, shot.y, shot.color, 8);
+    return true;
+  }
+  return false;
+}
+
+function advanceShots(nearby) {
+  const queue = game.shots;
+  for (const shot of queue) {
+    shot.x += shot.vx;
+    shot.y += shot.vy;
+    shot.life--;
+    if (shot.life > 0 && impact(shot, nearby)) shot.life = 0;
+    if (game.shots !== queue) return;
+  }
+  game.shots = queue.filter(shot => shot.life > 0);
+}
+
+function burst(x, y, color, count) {
+  if (reduceMotion) return;
+  for (let i = 0; i < count; i++) {
+    game.particles.push({ x, y, vx: (Math.random() - .5) * 4, vy: -Math.random() * 3, life: 14 + i, color });
+  }
+}
+
+function clearStage() {
+  const id = `${game.index}:${game.modeKey}`;
+  const best = settings.best[id];
+  if (!Number.isFinite(best) || game.time < best) settings.best[id] = game.time;
+  settings.unlocked = Math.max(settings.unlocked, Math.min(STAGES.length - 1, game.index + 1));
+  persist();
+  tone("clear");
+  setView("clear");
+}
+
+function update() {
+  if (view !== "play") return;
+  game.time++;
+  game.invincible = Math.max(0, game.invincible - 1);
+  game.cooldown = Math.max(0, game.cooldown - 1);
+  game.energy = Math.min(100, game.energy + .74);
+  if (toastFor > 0 && --toastFor === 0) $("notice").textContent = `STAGE ${game.index + 1} / 10 · ${game.mode.label.toUpperCase()}`;
+  movePlayer();
+  const p = game.player;
+  if (p.y > H + 10) {
+    respawn();
+    updateHud();
+    return;
+  }
+
+  if (held(firing)) fireWeapon();
+  const nearby = game.level.threats.filter(t => Math.abs(t.base - p.x) < 590);
+  const retries = game.deaths;
+  for (const t of nearby) {
+    stepThreat(t);
+    if (game.deaths !== retries) break;
+  }
+  if (game.deaths === retries) advanceShots(nearby);
+  for (const part of game.particles) {
+    part.x += part.vx;
+    part.y += part.vy;
+    part.vy += .16;
+    part.life--;
+  }
+  game.particles = game.particles.filter(part => part.life > 0);
+
+  const relay = game.level.relays[game.reached];
+  if (relay !== undefined && p.x + p.w / 2 >= relay) {
+    game.reached++;
+    p.hp = game.mode.hp;
+    game.energy = 100;
+    tone("relay");
+    burst(relay, FLOOR - 32, "#9effd9", 12);
+    announce(`Relay ${game.reached} linked · Health restored`);
+  }
+  if (p.x >= EXIT && game.reached === game.level.relays.length) {
+    updateHud();
+    clearStage();
+    return;
+  }
+  game.camera = clamp(p.x - 226, 0, TOTAL - W);
+  updateHud();
+}
+const overlay = $("overlay");
+const choice = (action, label, cls = "", attrs = "") =>
+  `<button type="button" data-action="${action}" class="${cls}" ${attrs}>${label}</button>`;
+const back = choice("menu", "Back to title");
+
+function panelFor(screen) {
+  switch (screen) {
+    case "menu":
+      return `<p class="kicker">THE RELAY NETWORK IS DOWN</p>
+        <h1 class="title" tabindex="-1">LEAP</h1>
+        <p class="tagline">Cross the dead zones. Bring the grid back online.</p>
+        <div class="buttons">
+          ${choice("start", settings.unlocked ? "Continue" : "Start game", "primary")}
+          ${choice("select", "Stage select")}
+          ${choice("avatar", "Avatar")}
+          ${choice("difficulty", "Difficulty")}
+          ${choice("controls", "Controls")}
+          ${choice("sound", "Sound " + (settings.sound ? "on" : "off"), "", `aria-pressed="${settings.sound}"`)}
+        </div><p class="selection">${MODES[settings.mode].label.toUpperCase()} MODE &nbsp;·&nbsp; 10 STAGES</p>`;
+
+    case "select": {
+      const slots = STAGES.map(({ name }, i) => {
+        const locked = i > settings.unlocked;
+        const best = settings.best[`${i}:${settings.mode}`];
+        const tag = locked ? "Locked" : (Number.isFinite(best) ? formatTime(best) : "Ready");
+        const title = `${String(i + 1).padStart(2, "0")}<br><span class="mini">${tag}</span>`;
+        return choice("stage", title, "", `data-index="${i}" aria-label="Stage ${i + 1}, ${name}, ${tag}" ${locked ? "disabled" : ""}`);
+      }).join("");
+      return `<p class="kicker">RELAY DIRECTORY</p><h2 tabindex="-1">Stage select</h2>
+        <p class="mini">Clear a stage to unlock the next. Best times are tracked by difficulty.</p>
+        <div class="stage-grid">${slots}</div>${back}`;
+    }
+
+    case "avatar": {
+      const rigs = RIGS.map((rig, i) => choice("rig", rig, "", `data-index="${i}" aria-pressed="${settings.rig === i}"`)).join("");
+      const colors = COLORS.map(([name, value], i) =>
+        choice("color", `<span style="background:${value}"></span>`, "", `data-index="${i}" aria-label="${name}" aria-pressed="${settings.color === i}"`)).join("");
+      return `<p class="kicker">PILOT WORKSHOP</p><h2 tabindex="-1">Customize your avatar</h2>
+        <div class="avatar-area">
+          <canvas id="avatar-preview" width="82" height="82" aria-label="Avatar preview"></canvas>
+          <div class="stack"><div class="toolbar">${rigs}</div><div class="swatches">${colors}</div></div>
+        </div><div class="stack">${back}</div>`;
+    }
+
+    case "difficulty": {
+      const descriptions = {
+        easy: "More health and slower hazards.", medium: "Standard health and timing.",
+        hard: "Faster hazards and armored foes.", extreme: "Three hearts, rapid fire and heavy armor."
+      };
+      const choices = Object.entries(MODES).map(([key, mode]) =>
+        choice("mode", `${mode.label}<br><span class="mini">${descriptions[key]}</span>`, "",
+          `data-mode="${key}" aria-pressed="${settings.mode === key}"`)).join("");
+      return `<p class="kicker">THREAT CALIBRATION</p><h2 tabindex="-1">Difficulty</h2>
+        <div class="choices">${choices}</div><div class="stack">${back}</div>`;
+    }
+
+    case "controls":
+      return `<p class="kicker">OPERATOR MANUAL</p><h2 tabindex="-1">Controls</h2>
+        <p class="help mini"><b>Move</b> &nbsp; A / D or ← / → &nbsp; <b>Jump</b> &nbsp; Space, W or ↑</p>
+        <p class="help mini"><b>Fire</b> &nbsp; J or X &nbsp; <b>Swap weapon</b> &nbsp; K or C &nbsp; <b>Use</b> &nbsp; E</p>
+        <p class="help mini">Esc pauses. Cross each relay to heal and set a checkpoint. Shots drain a battery that recharges over time.</p>
+        <p class="help mini">The Pulse reaches farther. The Scatter fires three short-range bolts.</p>${back}`;
+
+    case "pause":
+      return `<p class="kicker">${game.level.theme.name.toUpperCase()} / ${game.mode.label.toUpperCase()}</p><h2 tabindex="-1">Paused</h2>
+        <div class="buttons">${choice("resume", "Resume", "primary")}${choice("retry", "Restart stage")}
+        ${choice("sound", "Sound " + (settings.sound ? "on" : "off"), "", `aria-pressed="${settings.sound}"`)}${back}</div>`;
+
+    case "clear": {
+      const last = game.index === STAGES.length - 1;
+      return `<p class="kicker">SIGNAL RESTORED · ${game.level.theme.name.toUpperCase()}</p>
+        <h2 tabindex="-1">${last ? "Arcade cleared" : "Stage clear"}</h2>
+        <p>${formatTime(game.time)} &nbsp;·&nbsp; ${game.mode.label} &nbsp;·&nbsp; ${game.deaths} retries</p>
+        <div class="buttons stack">${last ? choice("select", "Stage select", "primary") : choice("next", "Next stage", "primary")}
+        ${choice("retry", "Replay stage")}${back}</div>`;
+    }
+  }
+}
+
+function setView(screen, focus = true, keep = "") {
+  view = screen;
+  clearInput();
+  const playing = view === "play";
+  const showingRun = playing || view === "pause" || view === "clear";
+  overlay.hidden = playing;
+  overlay.dataset.view = view;
+  $("touch").hidden = !playing;
+  $("meters").hidden = !showingRun;
+  $("standby").hidden = showingRun;
+  $("pause").disabled = !playing;
+  if (showingRun) {
+    $("stage-label").innerHTML = `<strong>${String(game.index + 1).padStart(2, "0")} / 10</strong> &nbsp;${game.level.theme.name}`;
+    lastHud = "";
+    updateHud();
+  } else {
+    $("stage-label").innerHTML = "<strong>LEAP</strong> &nbsp;/&nbsp; STANDBY";
+    $("notice").textContent = "10 STAGES / 4 MODES";
+  }
+  if (playing) {
+    if (focus) {
+      canvas.tabIndex = -1;
+      canvas.focus({ preventScroll: true });
+    }
+    return;
+  }
+  overlay.innerHTML = `<section class="panel">${panelFor(view)}</section>`;
+  overlay.scrollTop = 0;
+  if (view === "avatar") drawPreview();
+  if (focus) (overlay.querySelector(keep || "h1, h2") || overlay.querySelector("h1, h2"))?.focus({ preventScroll: true });
+}
+
+overlay.addEventListener("click", event => {
+  const button = event.target.closest("button[data-action]");
+  if (!button || button.disabled) return;
+  const { action, index, mode } = button.dataset;
+  if (action === "sound") {
+    settings.sound = !settings.sound;
+    persist();
+    tone("menu");
+    setView(view, true, '[data-action="sound"]');
+    return;
+  }
+  tone("menu");
+  if (["rig", "color", "mode"].includes(action)) {
+    settings[action] = action === "mode" ? mode : Number(index);
+    persist();
+    const option = action === "mode" ? `[data-mode="${mode}"]` : `[data-index="${index}"]`;
+    setView(view, true, `[data-action="${action}"]${option}`);
+    return;
+  }
+  switch (action) {
+    case "start": startStage(settings.unlocked); break;
+    case "stage": if (Number(index) <= settings.unlocked) startStage(Number(index)); break;
+    case "next": startStage(game.index + 1); break;
+    case "retry": startStage(game.index); break;
+    case "resume": setView("play"); break;
+    default: setView(action);
+  }
+});
+
+$("pause").addEventListener("click", () => {
+  if (view === "play") setView("pause");
+});
+
+window.addEventListener("keydown", event => {
+  if (event.altKey || event.ctrlKey || event.metaKey) return;
+  if (event.code === "Escape" && !event.repeat) {
+    if (view === "play") setView("pause");
+    else if (view === "pause") setView("play");
+    else if (view !== "menu") setView("menu");
+    return;
+  }
+  if (view !== "play" || !inputs.includes(event.code)) return;
+  if (event.code === "Space" && event.target instanceof HTMLButtonElement) return;
+  event.preventDefault();
+  keys.add(event.code);
+  if (!event.repeat) press(event.code);
+});
+window.addEventListener("keyup", event => keys.delete(event.code));
+window.addEventListener("blur", clearInput);
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && view === "play") setView("pause", false);
+});
+for (const button of $("touch").querySelectorAll("button")) {
+  button.addEventListener("pointerdown", event => {
+    if (view !== "play") return;
+    event.preventDefault();
+    button.setPointerCapture(event.pointerId);
+    pointers.set(event.pointerId, button.dataset.key);
+    press(button.dataset.key);
+  });
+  for (const name of ["pointerup", "pointercancel", "lostpointercapture"]) {
+    button.addEventListener(name, event => pointers.delete(event.pointerId));
+  }
+  button.addEventListener("click", event => {
+    if (view === "play" && event.detail === 0) press(button.dataset.key);
+  });
+}
+
+function rect(color, x, y, w, h, surface = ctx) {
+  surface.fillStyle = color;
+  surface.fillRect(Math.round(x), Math.round(y), w, h);
+}
+
+function poly(color, points) {
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(...points[0]);
+  for (let i = 1; i < points.length; i++) ctx.lineTo(...points[i]);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function pixelDisc(color, x, y, r) {
+  for (let h = -r; h <= r; h += 3) {
+    const width = Math.floor(Math.sqrt(r * r - h * h));
+    rect(color, x - width, y + h, width * 2 + 1, 3);
+  }
+}
+
+const gradients = new Map();
+function backdrop(theme, camera, time) {
+  let gradient = gradients.get(theme);
+  if (!gradient) {
+    gradient = ctx.createLinearGradient(0, 0, 0, H);
+    gradient.addColorStop(0, theme.sky);
+    gradient.addColorStop(.7, theme.glow);
+    gradient.addColorStop(1, theme.near);
+    gradients.set(theme, gradient);
+  }
+  rect(gradient, 0, 0, W, H);
+  for (let i = 0; i < 68; i++) {
+    const offset = i * 137 - camera * .038;
+    const x = (offset % W + W) % W;
+    const y = 17 + (i * 47) % 202;
+    rect(i % 5 ? "#ffffff32" : theme.light, x, y, i % 5 ? 2 : 3, 2);
+  }
+  const sun = 584 - (camera * .028 % 202);
+  pixelDisc("#ffda9d1f", sun, 120, 77);
+  pixelDisc("#ffda9d2c", sun, 120, 62);
+  pixelDisc(theme.light, sun, 120, 48);
+  for (let i = 0; i < 8; i++) rect(theme.glow, sun - 46 + i * 3, 125 + 5 * i, 92 - i * 6, 2);
+
+  for (let layer = 0; layer < 2; layer++) {
+    const speed = layer === 0 ? .13 : .29;
+    const base = layer === 0 ? 276 : 327;
+    const span = layer === 0 ? 95 : 70;
+    const slide = camera * speed;
+    const start = Math.floor(slide / span);
+    for (let n = start - 1; n < start + 14; n++) {
+      const x = n * span - slide;
+      const jitter = (Math.sin(n * 1.59 + layer) + 1) * 26;
+      const y = Math.round(base - jitter);
+      const color = layer === 0 ? theme.far : theme.near;
+      switch (theme.skyline) {
+        case "rail":
+        case "canopy":
+          rect(color, x, y, span - 8, H - y);
+          rect(color, x + 12, y - 9, 8, 12);
+          rect(color, x + 30, y - 20, 3, 21);
+          if (layer) for (let j = 0; j < 4; j++) rect("#ffe0a042", x + 9 + j * 11, y + 15 + (j % 2) * 9, 3, 5);
+          if (theme.skyline === "canopy") poly(color, [[x, y], [x + span / 2, y - 28], [x + span - 8, y]]);
+          break;
+        case "pipes":
+          rect(color, x + 15, y, 18, H - y);
+          rect(color, x + 8, y + 10, span + 6, 11);
+          rect(color, x + 5, y + 6, 8, 20);
+          rect(color, x + 40, y + 29, 15, H - y);
+          break;
+        case "water":
+          rect(color, x + 16, y + 18, 15, H - y);
+          rect(color, x, y + 17, span - 8, 6);
+          rect(color, x + 9, y, 24, 7);
+          rect(color, x + 12, y + 7, 7, 18);
+          break;
+        default:
+          poly(color, [[x, H], [x, y + 22], [x + span * .55, y - 42], [x + span, y + 26], [x + span, H]]);
+          rect(color, x + span * .55, y - 66, 3, 28);
+          rect(theme.light, x + span * .55, y - 66, 3, 3);
+      }
+    }
+  }
+  rect("#151526", 0, 398, W, 34);
+  for (let n = 0; n < 20; n++) {
+    const x = ((n * 79 - camera * .43 + time * .18) % W + W) % W;
+    rect("#a188b539", x, 403 + n * 9 % 23, 11 + n % 3 * 9, 2);
+  }
+}
+
+function drawDeck(d, theme) {
+  const depth = d.ground ? 21 : 9;
+  const drop = d.ground ? 106 : 13;
+  rect("#131324", d.x, d.y, d.w, drop);
+  poly(theme.far, [[d.x, d.y], [d.x + 9, d.y - 6], [d.x + d.w + 9, d.y - 6], [d.x + d.w, d.y]]);
+  poly(theme.near, [[d.x + d.w, d.y], [d.x + d.w + 9, d.y - 6], [d.x + d.w + 9, d.y + depth - 6], [d.x + d.w, d.y + depth]]);
+  rect(theme.near, d.x, d.y + 3, d.w, depth - 3);
+  rect("#f2c9d463", d.x, d.y, d.w, 2);
+  for (let offset = 14; offset < d.w - 6; offset += 32) {
+    rect("#181727", d.x + offset, d.y + 4, 2, depth - 4);
+    if (d.ground) {
+      rect(theme.far, d.x + offset + 6, d.y + 10, 9, 3);
+      rect(theme.sky, d.x + offset + 3, d.y + 28, 12, 26);
+    }
+  }
+}
+
+function drawAvatar(surface, x, y, facing, rig, color, stride, armed = true) {
+  const a = (shade, dx, dy, w, h) => rect(shade, x + (facing === 1 ? dx : 19 - dx - w), y + dy, w, h, surface);
+  a("#10101c", 3, 22, 6, 5);
+  a("#10101c", 11, 22, 6, 5);
+  a("#353251", 3, 20, 5, 4 + stride);
+  a("#353251", 11, 20, 5, 4 - stride);
+  a(color, 2, 10, 15, 11);
+  a("#151629", 4, 2, 12, 9);
+  if (rig === 0) {
+    a(color, 2, 0, 14, 4);
+    a(color, 15, 3, 3, 4);
+    a("#fff1db", 11, 5, 4, 2);
+  } else if (rig === 1) {
+    a(color, 3, 0, 14, 3);
+    a(color, 2, 3, 3, 7);
+    a("#e8f8ff", 9, 4, 8, 4);
+  } else {
+    a(color, 4, 1, 12, 3);
+    a(color, 5, -2, 2, 4);
+    a(color, 13, -2, 2, 4);
+    a("#fff1db", 8, 5, 2, 3);
+    a("#fff1db", 13, 5, 2, 3);
+  }
+  a("#fff7de75", 3, 10, 12, 2);
+  a("#29263e", 0, 17, 17, 3);
+  a("#fff1db", 4, 15, 3, 3);
+  if (armed) {
+    a("#222236", 13, 13, 10, 5);
+    a("#d4fff3", 20, 13, 4, 2);
+  }
+}
+
+function drawPreview() {
+  const node = $("avatar-preview");
+  const surface = node.getContext("2d");
+  rect("#17152a", 0, 0, 82, 82, surface);
+  rect("#443953", 12, 70, 58, 3, surface);
+  surface.save();
+  surface.translate(20, 11);
+  surface.scale(2.2, 2.2);
+  drawAvatar(surface, 0, 0, 1, settings.rig, COLORS[settings.color][1], 0, false);
+  surface.restore();
+}
+function drawThreat(t, theme) {
+  const { x, y, w, h, active, warning } = threatBox(t);
+  const alarm = warning ? "#ffca79" : "#ff8499";
+  switch (t.type) {
+    case "walker":
+      if (!active) break;
+      rect("#191729", x + 2, y + 6, 18, 10);
+      rect("#aa6d83", x + 5, y + 2, 12, 10);
+      rect(alarm, x + 6, y + 7, 10, 3);
+      rect("#191729", x + 2, y + 17, 6, 3);
+      rect("#191729", x + 14, y + 17, 6, 3);
+      break;
+    case "turret":
+      if (!active) break;
+      rect("#191729", x, y + 16, w, 6);
+      rect("#3b314b", x + 5, y + 4, 14, 14);
+      rect("#ac728c", x + 6, y + 2, 12, 5);
+      rect(alarm, x + 2, y + 8, 20, 3);
+      break;
+    case "spikes":
+      rect("#292339", x - 2, y + h - 4, w + 4, 4);
+      for (let i = 0; i < 4; i++) {
+        const tx = x + 9 * i + 2;
+        poly(active || warning ? alarm : theme.far, [[tx, y + h], [tx + 4, active ? y : y + 10], [tx + 8, y + h]]);
+      }
+      break;
+    case "laser":
+      rect("#242135", x - 4, y + h - 4, 20, 4);
+      rect("#242135", x - 4, y - 6, 20, 6);
+      if (active) {
+        rect("#ff6f9866", x - 3, y, w + 6, h);
+        rect(alarm, x + 3, y, 6, h);
+        rect("#fff0ca", x + 5, y, 2, h);
+      } else if (warning) {
+        for (let i = 0; i < h; i += 10) rect(alarm, x + 5, y + i, 2, 5);
+      }
+      break;
+    case "saw": {
+      const angle = game.time / 7;
+      rect("#392d49", x + 13, FLOOR - 106, 2, y - FLOOR + 112);
+      const points = [];
+      for (let i = 0; i < 20; i++) {
+        const radius = i % 2 ? 10 : 15;
+        points.push([x + 14 + Math.cos(angle + i * Math.PI / 10) * radius, y + 14 + Math.sin(angle + i * Math.PI / 10) * radius]);
+      }
+      poly("#ffc4bc", points);
+      rect("#8e587c", x + 10, y + 10, 8, 8);
+      rect("#ffe9d4", x + 13, y + 13, 2, 2);
+      break;
+    }
+    case "press":
+      rect("#312741", x + 12, FLOOR - 111, 6, y - FLOOR + 112);
+      rect(active ? "#c85c78" : "#51435d", x, y, w, h);
+      rect(alarm, x + 3, y + h - 5, w - 6, 3);
+      for (let i = 0; i < 3; i++) rect("#262036", x + 6 + i * 8, y + 3, 3, 10);
+      break;
+    case "mine":
+      if (!active) break;
+      rect("#29243a", x + 1, y + 3, w - 2, 8);
+      rect("#99718a", x + 6, y, w - 12, 4);
+      rect(alarm, x + 9, y + 2, 6, 3);
+      break;
+  }
+}
+
+function beacon(x, lit, label) {
+  const color = lit ? "#9affd5" : "#ffd186";
+  rect("#17172b", x - 13, FLOOR - 66, 26, 66);
+  rect("#403b56", x - 10, FLOOR - 63, 20, 59);
+  rect("#17172b", x - 6, FLOOR - 59, 12, 26);
+  rect(color, x - 4, FLOOR - 56, 8, 8);
+  rect(lit ? "#9affd566" : "#ffd18655", x - 19, FLOOR - 60, 38, 18);
+  rect("#242238", x - 21, FLOOR - 7, 42, 7);
+  ctx.fillStyle = color;
+  ctx.font = "bold 10px monospace";
+  ctx.textAlign = "center";
+  ctx.fillText(label, x, FLOOR - 79);
+}
+
+function decor(x, theme, n) {
+  rect("#1d1b2c", x - 10, FLOOR - 20, 20, 20);
+  rect(theme.far, x - 8, FLOOR - 18, 16, 14);
+  rect(theme.light, x - 5, FLOOR - 15, 2, 3);
+  rect(n % 2 ? "#ffffff50" : "#15172e", x + 1, FLOOR - 15, 5, 3);
+}
+
+function drawRun(time) {
+  const { level, player: p, camera, reached } = game;
+  const t = level.theme;
+  backdrop(t, camera, time);
+  ctx.save();
+  ctx.translate(-Math.round(camera), 0);
+
+  for (let n = Math.max(0, Math.floor(camera / ROOM)); n <= Math.floor((camera + W) / ROOM); n++) {
+    decor(n * ROOM + 27, t, n);
+  }
+  for (const d of level.decks) {
+    if (d.x + d.w >= camera - 12 && d.x <= camera + W + 12) drawDeck(d, t);
+  }
+  for (let i = 0; i < level.relays.length; i++) {
+    const x = level.relays[i];
+    if (between(x, camera - 30, camera + W + 30)) beacon(x, reached > i, "RELAY " + (i + 1));
+  }
+  if (between(EXIT, camera - 30, camera + W + 30)) beacon(EXIT, reached === level.relays.length, "EXIT");
+  const cache = level.cache;
+  if (cache && Math.abs(p.x + p.w / 2 - cache.x) < 64 && !settings.caches.includes(cache.id)) {
+    rect("#262037", cache.x - 4, cache.y - 4, 8, 8);
+    if (Math.floor(game.time / 12) % 3 !== 1) rect("#ebd5a9", cache.x - 1, cache.y - 1, 3, 3);
+  }
+  for (const hazard of level.threats) {
+    if (between(hazard.base, camera - 50, camera + W + 50)) drawThreat(hazard, t);
+  }
+  for (const shot of game.shots) {
+    rect(shot.color, shot.x, shot.y, shot.w, shot.h);
+    rect("#fff2d8", shot.x + 1, shot.y + 1, 3, 2);
+  }
+  for (const part of game.particles) rect(part.color, part.x, part.y, 2, 2);
+  if (p.grounded) rect("#0f0e2070", p.x - 4, p.y + p.h - 2, p.w + 8, 3);
+  if (!game.invincible || reduceMotion || Math.floor(game.invincible / 5) % 2) {
+    const stride = p.grounded && (held(left) || held(right)) ? Math.round(Math.sin(game.time / 2.6) * 2) : 0;
+    drawAvatar(ctx, p.x, p.y, p.facing, settings.rig, COLORS[settings.color][1], stride);
+  }
+  ctx.restore();
+
+  rect("#1a172cbf", 15, 14, W - 30, 5);
+  rect(t.light, 15, 14, (W - 30) * clamp(p.x / EXIT, 0, 1), 5);
+  for (const x of level.relays) rect("#fcf0d5", 15 + (W - 30) * x / EXIT, 13, 2, 7);
+}
+
+const menuDecks = [
+  { x: 0, y: FLOOR, w: 314, ground: true }, { x: 362, y: 367, w: 134, ground: true },
+  { x: 553, y: 346, w: 215, ground: true }, { x: 389, y: 287, w: 67 },
+  { x: 508, y: 268, w: 116 }, { x: 666, y: 239, w: 81 }
+];
+
+function drawMenu(time) {
+  const theme = STAGES[0];
+  backdrop(theme, 160, time);
+  for (const deck of menuDecks) drawDeck(deck, theme);
+  beacon(693, true, "01");
+  ctx.save();
+  const float = reduceMotion ? 0 : Math.round(Math.sin(time / 27) * 4);
+  ctx.translate(521, 190 + float);
+  ctx.scale(2.5, 2.5);
+  drawAvatar(ctx, 0, 0, 1, settings.rig, COLORS[settings.color][1], 0);
+  ctx.restore();
+}
+
+let previous;
+let lag = 0;
+function frame(now) {
+  if (previous !== undefined && view === "play") lag += Math.min(100, now - previous);
+  else lag = 0;
+  previous = now;
+  while (lag >= STEP) {
+    update();
+    lag -= STEP;
+  }
+  if (view === "play" || view === "pause" || view === "clear") drawRun(game.time);
+  else drawMenu(reduceMotion ? 0 : now / STEP);
+  requestAnimationFrame(frame);
+}
+
+setView("menu", false);
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
