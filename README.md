@@ -1,19 +1,22 @@
 # AI Prompt Engineering Portfolio
 
-A showcase of **single-file game prompts** and **new ideas** developed from now on.
+A showcase of **single-file game prompts** and **new ideas**.
 
-This portfolio focuses on the design and refinement of AI instructions, creative constraints, and the results those instructions produce.
+I document the instructions I give AI coding tools, how I refine specifications, and what the resulting projects demonstrate. Claims about outcomes are distinguished from unverified AI test reports.
 
 ## Projects
 
 | Project | Focus |
 | --- | --- |
-| [Single-file game development](case-studies/single-file-game.md) | Designing ambitious game experiences within a single HTML file |
+| [**Leap — platformer prompt experiment**](case-studies/single-file-game.md) | Comparing a basic one-file platformer prompt with a more detailed 10-level game specification |
 
-## New work
+### Featured experiment: Leap
 
-Future ideas and prompt experiments will be added as separate case studies when they are developed. Each case study can feature the actual prompt, iterations, screenshots and demonstrable results.
+Using OpenAI Codex, I tested two prompts for single-file HTML platformers. The first produced a simple one-level game; the second specified ten stages, four difficulty modes, character customisation, combat and testing requirements. ChatGPT informally rated my detailed prompt **8/10** and my overall performance **7.5/10**. These are subjective ratings, not credentials. The agent reported successful simulations, but real browser testing was not verified.
 
-## Evidence
+[Read the case study →](case-studies/single-file-game.md)
 
-Only genuine work is represented. Screenshots and completed examples will be published alongside the relevant project when available.
+## Future work
+
+New prompt engineering projects will be added here with screenshots, prompts, implementation evidence and notes on what worked.
+
