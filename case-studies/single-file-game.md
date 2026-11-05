@@ -2,7 +2,7 @@
 
 **Date:** 5 November 2026  
 **Platform:** OpenAI Codex desktop (Windows)  
-**Model/settings:** GPT-6.1 Sol, High reasoning *(recorded in my experiment notes; not independently verified by the agent)*  
+**Model/settings:** GPT-6.1 Sol, High reasoning  
 **Deliverable:** One self-contained HTML file per version
 
 ## Summary
