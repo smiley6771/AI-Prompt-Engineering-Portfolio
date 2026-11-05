@@ -14,6 +14,15 @@ I document the instructions I give AI coding tools, how I refine specifications,
 
 Using OpenAI Codex, I tested two prompts for single-file HTML platformers. The first produced a simple one-level game; the second specified ten stages, four difficulty modes, character customisation, combat and testing requirements. ChatGPT informally rated my detailed prompt **8/10** and my overall performance **7.5/10**. These are subjective ratings, not credentials. The agent reported successful simulations, but real browser testing was not verified.
 
+**Compare the actual HTML games:**
+
+| Version | Game | Files |
+| --- | --- | --- |
+| **Prompt 1 — Basic** | **Lantern Leap** — single level, seven collectibles | [View HTML source](games/01-lantern-leap-baseline.html) |
+| **Prompt 2 — Detailed** | **Leap** — ten stages, menus, difficulty options and combat | [View HTML source](games/02-leap-detailed-prompt.html) |
+
+Both files are standalone HTML games. To play a version locally, open its GitHub file page, select **Download raw file**, then open the downloaded `.html` file in a browser.
+
 [Read the case study →](case-studies/single-file-game.md)
 
 ## Future work
