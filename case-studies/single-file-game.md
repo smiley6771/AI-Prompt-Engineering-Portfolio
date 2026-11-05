@@ -1,26 +1,18 @@
-# Single-File Game Development Challenge
+# Single-File Game Development
 
-**Area:** AI-assisted coding / constrained specification  
-**Stage:** Prompt brief
+**Focus:** Prompt engineering for AI-assisted game development  
+**Constraint:** The complete game must fit in one HTML file.
 
 ## The challenge
 
-I challenged an AI coding tool with an ambitious game-development request under a strict constraint: **one HTML file**.
+Produce imaginative, interactive browser games using a tightly constrained deliverable: a single HTML file containing the required HTML, CSS and JavaScript.
 
-## Why the constraint matters
+## Prompt design
 
-A one-file requirement forces choices around combining structure, styling and behaviour. It can make AI-assisted implementation more difficult than producing a small collection of files.
+The central challenge is to communicate a sufficiently detailed game concept, mechanics, controls, visuals and technical constraints so an AI coding tool can generate a coherent playable result.
 
-## My contribution
+## Showcase
 
-The project originated as a deliberately difficult, compact software brief. Its value as a portfolio example comes from the constraints I set and, once evidence is attached, how I responded to the limitations of the generated result.
+This case study will feature new single-file games created with AI-assisted coding prompts, including the actual prompts, screenshots of the games, important revisions, and links to working examples.
 
-## What this demonstrates
-
-This is evidence of a creative technical brief, **not** evidence that a full commercial-quality game was created.
-
-## Evidence
-
-Original prompt, iterations, screenshots of actual output and a working project link can be displayed here.
-
-<!-- Insert verified screenshots and demo links here. -->
+**Current evidence:** No new game screenshots or evaluated results published here yet.
