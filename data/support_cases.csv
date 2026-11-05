@@ -1,0 +1,31 @@
+id,ticket,expected_category
+1,"Employee received a fake payroll email asking for their password",security
+2,"Laptop shows a ransomware warning and files are encrypted",security
+3,"Unrecognised sign-in appears in account activity",security
+4,"User accidentally approved an unknown MFA push notification",security
+5,"Several colleagues received a suspicious attachment",security
+6,"Antivirus reports a possible trojan on a workstation",security
+7,"Browser redirected to a lookalike login page",security
+8,"A former contractor still appears to have account access",security
+9,"Staff laptop cannot join office Wi-Fi",networking
+10,"VPN connects but company intranet cannot be reached",networking
+11,"Websites fail because DNS lookups time out",networking
+12,"Meeting room Ethernet port has no connection",networking
+13,"Video calls are lagging because of packet loss",networking
+14,"Computer cannot get an IP address from DHCP",networking
+15,"Office printer is online locally but unreachable over the network",networking
+16,"Guest Wi-Fi connects but has no internet access",networking
+17,"Laptop battery no longer holds a charge",hardware
+18,"External monitor has a cracked display",hardware
+19,"Keyboard keys are physically stuck",hardware
+20,"Computer fan makes a grinding noise",hardware
+21,"USB headset is not detected even on a second computer",hardware
+22,"Desktop will not power on after testing the socket",hardware
+23,"Mouse scroll wheel is physically broken",hardware
+24,"Phone charging port is loose",hardware
+25,"Spreadsheet application crashes when opening a file",software
+26,"User cannot install an approved application update",software
+27,"PDF viewer displays a rendering error",software
+28,"A browser extension is incompatible with a new release",software
+29,"Calendar app no longer synchronises after a configuration change",software
+30,"Text editor refuses to save files because of a permissions setting",software
